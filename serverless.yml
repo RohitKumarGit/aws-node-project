@@ -1,0 +1,55 @@
+service: aws-node-project
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+provider:
+  websocketsApiName: websockets-api
+  websocketsApiRouteSelectionExpression: $request.body.action
+  name: aws
+  region: "ap-south-1"
+  runtime: nodejs12.x
+  lambdaHashingVersion: "20201221"
+  iam:
+    role:
+      statements: # permissions for all of your functions can be set here
+        - Effect: Allow
+          Action: # Gives permission to DynamoDB tables
+            - logs:*
+            - dynamodb:*
+            - states:*
+            - events:*
+          Resource:
+            - "*"
+            - "arn:aws:dynamodb:*:*:*"
+
+functions:
+  OnConnectHandler:
+    handler: handler.onConnect
+    events:
+      - websocket:
+          route: $connect
+  OnDisconnect:
+    handler: handler.onDisconnect
+    events:
+      - websocket:
+          route: $disconnect
+  onBroadcast:
+    handler: handler.onBroadcast
+    events:
+      - websocket:
+          route: broadcast
+resources:
+  Resources:
+    WebSocketTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: web-socket-connections
+        AttributeDefinitions:
+          - AttributeName: connectionId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: connectionId
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
